@@ -15,6 +15,8 @@ class PhysicalMemory:
     assert algorithm in {"fifo", "nru", "aging", "second-chance"}
     if algorithm == "fifo":
       self.algorithm = FifoPhysicalMemory()
+    elif algorithm == "second-chance":
+      self.algorithm = SecondChancePhysicalMemory()
     # Todo: add new algoritms
 
   def put(self, frameId):
@@ -55,3 +57,32 @@ class FifoPhysicalMemory(object):
   def access(self, frameId, isWrite):
     pass
 
+class SecondChancePhysicalMemory(object):
+  """
+    In the second chance algorithm the page frame is represented
+    as a tuple (x, y).
+    x --> frameId
+    y --> bit R
+  """
+  def __init__(self):
+    self.allocatedFrames = []
+
+  def put(self, frameId):
+    self.allocatedFrames.append((frameId, 0, 0))
+
+  def evict(self):
+    if self.allocatedFrames[0][1] == 0:
+      self.allocatedFrames.pop(0)
+    else:
+      self.allocatedFrames.append(self.allocatedFrames.pop(0))
+      for index in xrange(len(self.allocatedFrames)):
+        self.allocatedFrames[index][1] == 0:
+          return self.allocatedFrames.pop(index)[0]
+
+  def clock(self):
+    pass
+
+  def access(self, frameId, isWrite):
+    for frame in self.allocatedFrames:
+      if frame[0] == frameId:
+        frame[1] = 1 # referenced
