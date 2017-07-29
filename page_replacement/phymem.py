@@ -60,7 +60,7 @@ class FifoPhysicalMemory(object):
 class SecondChancePhysicalMemory(object):
   """
     In the second chance algorithm the page frame is represented
-    as a tuple (x, y).
+    as a list of lists [x, y].
     x --> frameId
     y --> bit R
   """
@@ -68,7 +68,7 @@ class SecondChancePhysicalMemory(object):
     self.allocatedFrames = []
 
   def put(self, frameId):
-    self.allocatedFrames.append((frameId, 0, 0))
+    self.allocatedFrames.append([frameId, 0])
 
   def evict(self):
     if self.allocatedFrames[0][1] == 0:
@@ -76,13 +76,47 @@ class SecondChancePhysicalMemory(object):
     else:
       self.allocatedFrames.append(self.allocatedFrames.pop(0))
       for index in xrange(len(self.allocatedFrames)):
-        self.allocatedFrames[index][1] == 0:
+        if self.allocatedFrames[index][1] == 0:
           return self.allocatedFrames.pop(index)[0]
 
   def clock(self):
     pass
 
   def access(self, frameId, isWrite):
+    for frame in self.allocatedFrames:
+      if frame[0] == frameId:
+        frame[1] = 1 # referenced
+
+class AgingPhysicalMemory(object):
+  """
+    In the aging algorithm the page frame is represented
+    as list of lists [x, y, z].
+    x --> frameId
+    y --> bit R
+    z --> aging counter
+  """
+  def __init__(self):
+    self.allocatedFrames = []
+  
+  def put(self, frameId):
+    self.allocatedFrames.append([frameId, 0, 0])
+
+  def evict(self):
+    evicted_index = 0
+    for index in xrange(1, len(self.allocatedFrames)):
+      if self.allocatedFrames[index][2] < self.allocatedFrames[evicted_index][2]:
+        evicted_index = index
+    
+    return self.allocatedFrames.pop(evicted_index)
+
+  def clock(self):
+    for frame in self.allocatedFrames:
+      frame[2] = frame[2] >> 1 # right shift
+      if frame[1] == 1:
+        frame[2] += 128 # 1000 0000
+      frame[1] = 0 # Set referenced to zero
+  
+  def access(self, frameId):
     for frame in self.allocatedFrames:
       if frame[0] == frameId:
         frame[1] = 1 # referenced
