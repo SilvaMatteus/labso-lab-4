@@ -19,6 +19,8 @@ class PhysicalMemory:
             self.algorithm = SecondChancePhysicalMemory()
         elif algorithm == "aging":
             self.algorithm = AgingPhysicalMemory()
+        elif algorithm == "nru":
+            self.algorithm = NRUPhysicalMemory()
             # Todo: add new algoritms
 
     def put(self, frameId):
@@ -72,7 +74,7 @@ class SecondChancePhysicalMemory(object):
         self.allocatedFrames = []
 
     def put(self, frameId):
-        self.allocatedFrames.append([int(frameId), 0])
+        self.allocatedFrames.append([int(frameId), 1])
 
     def evict(self):
         if self.allocatedFrames[0][1] == 0:
@@ -89,7 +91,7 @@ class SecondChancePhysicalMemory(object):
 
     def access(self, frameId, isWrite):
         for frame in self.allocatedFrames:
-            if frame[0] == frameId:
+            if frame[0] == int(frameId):
                 frame[1] = 1  # referenced
 
 
@@ -106,7 +108,7 @@ class AgingPhysicalMemory(object):
         self.allocatedFrames = []
 
     def put(self, frameId):
-        self.allocatedFrames.append([int(frameId), 0, 0])
+        self.allocatedFrames.append([int(frameId), 1, 0])
 
     def evict(self):
         evicted_index = 0
@@ -120,16 +122,16 @@ class AgingPhysicalMemory(object):
         for frame in self.allocatedFrames:
             frame[2] = frame[2] >> 1  # right shift
             if frame[1] == 1:
-                frame[2] += 128  # 1000 0000
+                frame[2] |= 128
             frame[1] = 0  # Set referenced to zero
 
     def access(self, frameId, isWrite):
         for frame in self.allocatedFrames:
-            if frame[0] == frameId:
+            if frame[0] == int(frameId):
                 frame[1] = 1  # referenced
 
 
-class NRU(object):
+class NRUPhysicalMemory(object):
     """
     The not recently used (NRU) page replacement algorithm is an algorithm that favours keeping pages in memory that
     have been recently used. This algorithm works on the following principle: when a page is referenced, a referenced
@@ -162,24 +164,24 @@ class NRU(object):
         self.allocatedFrames = []
 
     def put(self, frameId):
-        self.allocatedFrames.append([int(frameId), 0, 0])
+        self.allocatedFrames.append([int(frameId), 1, 0])
 
     def evict(self):
-        evicted_index = 0
-        for index in xrange(1, len(self.allocatedFrames)):
-            if self.allocatedFrames[index][2] < self.allocatedFrames[evicted_index][2]:
-                evicted_index = index
-
-        return self.allocatedFrames.pop(evicted_index)[0]
+        self.allocatedFrames = sorted(self.allocatedFrames, cmp=self.compare_to, reverse=True)
+        return self.allocatedFrames.pop()[0]
 
     def clock(self):
         for frame in self.allocatedFrames:
-            frame[2] = frame[2] >> 1  # right shift
-            if frame[1] == 1:
-                frame[2] += 128  # 1000 0000
-            frame[1] = 0  # Set referenced to zero
+            frame[1] = 0
 
     def access(self, frameId, isWrite):
         for frame in self.allocatedFrames:
-            if frame[0] == frameId:
+            if frame[0] == int(frameId):
                 frame[1] = 1  # referenced
+                if isWrite:
+                    frame[2] = 1
+
+    def compare_to(self, fa, fb):
+        va = fa[1] * 10 +fa[2]
+        vb = fb[1] * 10 +fb[2]
+        return va - vb
