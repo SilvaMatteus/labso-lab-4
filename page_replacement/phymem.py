@@ -7,12 +7,14 @@
 # NOTE: there may be methods you don't need to modify, you must decide what
 # you need...
 
+from Queue import Queue
+
 class PhysicalMemory:
     ALGORITHM_AGING_NBITS = 8
     """How many bits to use for the Aging algorithm"""
 
     def __init__(self, algorithm):
-        assert algorithm in {"fifo", "nru", "aging", "second-chance"}
+        assert algorithm in {"fifo", "second-chance", "lru", "nru", "aging"}
         if algorithm == "fifo":
             self.algorithm = FifoPhysicalMemory()
         elif algorithm == "second-chance":
@@ -47,13 +49,13 @@ class PhysicalMemory:
 
 class FifoPhysicalMemory(object):
     def __init__(self):
-        self.allocatedFrames = []
+        self.allocatedFrames = Queue()
 
     def put(self, frameId):
-        self.allocatedFrames.append(int(frameId))
+        self.allocatedFrames.put(frameId)
 
     def evict(self):
-        return self.allocatedFrames.pop(0)
+        return self.allocatedFrames.get()
 
     def clock(self):
         pass
