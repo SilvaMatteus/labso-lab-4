@@ -1,3 +1,6 @@
 */.pyc
 */.py~
 .idea
+
+/python/output/*
+!/python/output/README
