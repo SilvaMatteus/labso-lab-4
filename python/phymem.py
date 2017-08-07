@@ -89,17 +89,13 @@ class SecondChanceAlgorithm:
         """Deallocates a frame from the physical memory and returns its frameId"""
         # You may assume the physical memory is FULL so we need space!
         # Your code must decide which frame to return, according to the algorithm
-        frame = self.allocatedFrames.pop(0)
-        if frame[1] == 0:
-            return frame[0]
-        else:
-            frame[1] = 0
-            self.allocatedFrames.append(frame)
-
-        for i in xrange(len(self.allocatedFrames)):
-            if self.allocatedFrames[i][1] == 0:
-                frame = self.allocatedFrames.pop(i)
+        while True:
+            frame = self.allocatedFrames.pop(0)
+            if frame[1] == 0:
                 return frame[0]
+            else:
+                frame[1] = 0
+                self.allocatedFrames.append(frame)
 
     def clock(self):
         """The amount of time we set for the clock has passed, so this is called"""
