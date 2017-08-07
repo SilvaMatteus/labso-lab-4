@@ -20,6 +20,8 @@ class PhysicalMemory:
 
         if algorithm == "fifo":
             self.impl = FIFOAlgorithm()
+        elif algorithm == "second-chance":
+            self.impl = SecondChanceAlgorithm()
 
     def put(self, frameId):
         """Allocates this frameId for some page"""
@@ -69,3 +71,44 @@ class FIFOAlgorithm:
     def access(self, frameId, isWrite):
         """A frameId was accessed for read/write (if write, isWrite=True)"""
         pass
+
+
+class SecondChanceAlgorithm:
+    def __init__(self):
+        self.allocatedFrames = []
+
+    def put(self, frameId):
+        """Allocates this frameId for some page"""
+        # Notice that in the physical memory we don't care about the pageId, we only
+        # care about the fact we were requested to allocate a certain frameId
+        # [frameId, R-bit]
+        self.allocatedFrames.append([frameId, 0])
+        pass
+
+    def evict(self):
+        """Deallocates a frame from the physical memory and returns its frameId"""
+        # You may assume the physical memory is FULL so we need space!
+        # Your code must decide which frame to return, according to the algorithm
+        frame = self.allocatedFrames.pop(0)
+        if frame[1] == 0:
+            return frame[0]
+        else:
+            frame[1] = 0
+            self.allocatedFrames.append(frame)
+
+        for i in xrange(len(self.allocatedFrames)):
+            if self.allocatedFrames[i][1] == 0:
+                frame = self.allocatedFrames.pop(i)
+                return frame[0]
+
+    def clock(self):
+        """The amount of time we set for the clock has passed, so this is called"""
+        # Clear the reference bits (and/or whatever else you think you must do...)
+        pass
+
+    def access(self, frameId, isWrite):
+        """A frameId was accessed for read/write (if write, isWrite=True)"""
+        for i in xrange(len(self.allocatedFrames)):
+            if self.allocatedFrames[i][0] == frameId:
+                self.allocatedFrames[i][1] = 1
+                break
