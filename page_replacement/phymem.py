@@ -74,25 +74,25 @@ class SecondChancePhysicalMemory(object):
         self.allocatedFrames = []
 
     def put(self, frameId):
-        self.allocatedFrames.append([int(frameId), 1])
+        self.allocatedFrames.append([frameId, 1])
 
     def evict(self):
-        if self.allocatedFrames[0][1] == 0:
-            return self.allocatedFrames.pop(0)[0]
-        else:
-            self.allocatedFrames.append(self.allocatedFrames.pop(0))
-            self.allocatedFrames[-1][1] = 0
-            for index in xrange(len(self.allocatedFrames)):
-                if self.allocatedFrames[index][1] == 0:
-                    return self.allocatedFrames.pop(index)[0]
+        while True:
+            frame = self.allocatedFrames.pop(0)
+            if frame[1] == 0:
+                return frame[0]
+            else:
+                frame[1] = 0
+                self.allocatedFrames.append(frame)
 
     def clock(self):
         pass
 
     def access(self, frameId, isWrite):
         for frame in self.allocatedFrames:
-            if frame[0] == int(frameId):
+            if frame[0] == frameId:
                 frame[1] = 1  # referenced
+                break
 
 
 class AgingPhysicalMemory(object):
