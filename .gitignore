@@ -1,6 +1,8 @@
 */.pyc
 */.py~
+*.pyc
 .idea
+.DS_Store
 
 /python/output/*
 !/python/output/README
