@@ -8,6 +8,7 @@
 # you need...
 
 from Queue import Queue
+import time
 
 ALGORITHM_AGING_NBITS = 8
 
@@ -116,7 +117,7 @@ class LRUPhysicalMemory(object):
         self.allocatedFrames = []
 
     def put(self, frameId):
-        self.allocatedFrames.append([frameId, 1])
+        self.allocatedFrames.append([frameId, time.time()])
 
     def evict(self):
         evicted_index = 0
@@ -132,7 +133,7 @@ class LRUPhysicalMemory(object):
     def access(self, frameId, isWrite):
         for frame in self.allocatedFrames:
             if frame[0] == frameId:
-                frame[1] += 1  # referenced
+                frame[1] = time.time()  # referenced
                 break
 
 

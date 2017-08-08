@@ -1,2 +1,5 @@
-page_replacement/output/
+page_replacement/output/trace*
 *.pyc
+
+/.idea
+/.venv
