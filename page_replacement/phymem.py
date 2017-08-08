@@ -9,8 +9,10 @@
 
 from Queue import Queue
 
+ALGORITHM_AGING_NBITS = 8
+
+
 class PhysicalMemory:
-    ALGORITHM_AGING_NBITS = 8
     """How many bits to use for the Aging algorithm"""
 
     def __init__(self, algorithm):
@@ -23,7 +25,8 @@ class PhysicalMemory:
             self.algorithm = AgingPhysicalMemory()
         elif algorithm == "nru":
             self.algorithm = NRUPhysicalMemory()
-            # Todo: add new algoritms
+        elif algorithm == "lru":
+            self.algorithm = LRUPhysicalMemory()
 
     def put(self, frameId):
         """Allocates this frameId for some page"""
@@ -76,6 +79,10 @@ class SecondChancePhysicalMemory(object):
         self.allocatedFrames = []
 
     def put(self, frameId):
+        for frame in self.allocatedFrames:
+            if frame[0] == frameId:
+                return
+
         self.allocatedFrames.append([frameId, 1])
 
     def evict(self):
@@ -97,6 +104,38 @@ class SecondChancePhysicalMemory(object):
                 break
 
 
+class LRUPhysicalMemory(object):
+    """
+      In the LRU algorithm the page frame is represented
+      as a list of lists [x, y].
+      x --> frameId
+      y --> counter
+    """
+
+    def __init__(self):
+        self.allocatedFrames = []
+
+    def put(self, frameId):
+        self.allocatedFrames.append([frameId, 1])
+
+    def evict(self):
+        evicted_index = 0
+        for index in xrange(1, len(self.allocatedFrames)):
+            if self.allocatedFrames[index][1] < self.allocatedFrames[evicted_index][1]:
+                evicted_index = index
+
+        return self.allocatedFrames.pop(evicted_index)[0]
+
+    def clock(self):
+        pass
+
+    def access(self, frameId, isWrite):
+        for frame in self.allocatedFrames:
+            if frame[0] == frameId:
+                frame[1] += 1  # referenced
+                break
+
+
 class AgingPhysicalMemory(object):
     """
       In the aging algorithm the page frame is represented
@@ -107,10 +146,13 @@ class AgingPhysicalMemory(object):
     """
 
     def __init__(self):
+        global ALGORITHM_AGING_NBITS
+
+        self.counter_bits = ALGORITHM_AGING_NBITS
         self.allocatedFrames = []
 
     def put(self, frameId):
-        self.allocatedFrames.append([int(frameId), 1, 0])
+        self.allocatedFrames.append([frameId, 1, 2 ** (self.counter_bits - 1)])
 
     def evict(self):
         evicted_index = 0
@@ -123,14 +165,32 @@ class AgingPhysicalMemory(object):
     def clock(self):
         for frame in self.allocatedFrames:
             frame[2] = frame[2] >> 1  # right shift
+
             if frame[1] == 1:
-                frame[2] |= 128
+                frame[2] |= 2 ** (self.counter_bits - 1)
+
             frame[1] = 0  # Set referenced to zero
 
     def access(self, frameId, isWrite):
         for frame in self.allocatedFrames:
-            if frame[0] == int(frameId):
+            if frame[0] == frameId:
                 frame[1] = 1  # referenced
+
+
+def nru_frameclass(frame):
+    """
+    3. referenced, modified
+    2. referenced, not modified
+    1. not referenced, modified
+    0. not referenced, not modified
+
+    index 1 --> referenced bit
+    index 2 --> modified bit
+    """
+    if frame[1] == 1 and frame[2] == 1: return 3
+    if frame[1] == 1 and frame[2] == 0: return 2
+    if frame[1] == 0 and frame[2] == 1: return 1
+    if frame[1] == 0 and frame[2] == 0: return 0
 
 
 class NRUPhysicalMemory(object):
@@ -166,11 +226,22 @@ class NRUPhysicalMemory(object):
         self.allocatedFrames = []
 
     def put(self, frameId):
-        self.allocatedFrames.append([int(frameId), 1, 0])
+        self.allocatedFrames.append([frameId, 1, 0])
 
     def evict(self):
-        self.allocatedFrames = sorted(self.allocatedFrames, cmp=self.compare_to, reverse=True)
-        return self.allocatedFrames.pop()[0]
+        frame_classes = map(nru_frameclass, self.allocatedFrames)
+
+        min_class = 4
+        min_index = -1
+
+        for i in xrange(len(frame_classes)):
+            if frame_classes[i] < min_class:
+                min_index = i
+                min_class = frame_classes[i]
+
+        evict_frame = self.allocatedFrames.pop(min_index)
+
+        return evict_frame[0]
 
     def clock(self):
         for frame in self.allocatedFrames:
@@ -178,12 +249,7 @@ class NRUPhysicalMemory(object):
 
     def access(self, frameId, isWrite):
         for frame in self.allocatedFrames:
-            if frame[0] == int(frameId):
-                frame[1] = 1  # referenced
+            if frame[0] == frameId:
+                frame[1] = 1
                 if isWrite:
                     frame[2] = 1
-
-    def compare_to(self, fa, fb):
-        va = fa[1] * 10 +fa[2]
-        vb = fb[1] * 10 +fb[2]
-        return va - vb
